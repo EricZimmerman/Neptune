@@ -1,4 +1,4 @@
-# Auto-generated on 2025-12-02T17:17:33 | printer_model: n4pro | current: 1.2
+# Auto-generated on 2025-12-02T16:46:21 | printer_model: n4pro | current: 1.2
 
 #----------------------------------------------------------------------------
 #      ____                _  __         __  ____              
@@ -20,6 +20,7 @@
 [include KAMP_Settings.cfg]
 [include ./KAMP/Smart_Park.cfg]
 [include ./KAMP/Line_Purge.cfg]
+
 #[include klipper_debug.cfg]
 #[include adxl.cfg]             ; Comment this out when you disconnect the Pico/MellowFly
 
@@ -70,17 +71,27 @@ gcode:
     G90                       ; Use absolute coordinates
     BED_MESH_CLEAR    
   
+>>>>>>> fc1d1ee6868aa94615d8ea363d881973da0d4ee0
     {% set BED_TEMP = params.BED_TEMP|default(60)|float %}
     {% set BED_HEAT_SOAK_MINUTES = params.BED_HEAT_SOAK_MINUTES|default(0)|float %}
     {% set BED_MESH = params.BED_MESH|default('adaptive')|string %} ; One of: adaptive (default), full, default (or any other value as the bed mesh profile name), none
     {% set EXTRUDER_TEMP = params.EXTRUDER_TEMP|default(200)|float %}
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> fc1d1ee6868aa94615d8ea363d881973da0d4ee0
     {% set area_start = params.AREA_START|default('0,0')|string %}
     {% set area_end = params.AREA_END|default('0,0')|string %}
     
     {% set start_coords = area_start.split(',')|map('float')|list %}
+<<<<<<< HEAD
     {% set end_coords = area_end.split(',')|map('float')|list %}    
 
+=======
+    {% set end_coords = area_end.split(',')|map('float')|list %}
+    
+>>>>>>> fc1d1ee6868aa94615d8ea363d881973da0d4ee0
     {% set center_min_x = 62.5 %}                                             ; define centre area bounds
     {% set center_min_y = 62.5 %}
     {% set center_max_x = 172.5 %}
@@ -88,6 +99,7 @@ gcode:
     
     ; Check if print is within center area
     {% if start_coords[0] >= center_min_x and start_coords[1] >= center_min_y and end_coords[0] <= center_max_x and end_coords[1] <= center_max_y %}
+<<<<<<< HEAD
       SET_GCODE_VARIABLE MACRO=PRINT_START VARIABLE=small_print VALUE=True
     {% else %}                                                               ; print extends beyond center, set temperatures for both beds
       SET_GCODE_VARIABLE MACRO=PRINT_START VARIABLE=small_print VALUE=False 
@@ -101,13 +113,32 @@ gcode:
       SET_GCODE_VARIABLE MACRO=PRINT_START VARIABLE=force_outer_bed_heater VALUE=False
     {% endif %}
 
+=======
+    SET_GCODE_VARIABLE MACRO=PRINT_START VARIABLE=small_print VALUE=True
+    {% else %}                                                               ; print extends beyond center, set temperatures for both beds
+    SET_GCODE_VARIABLE MACRO=PRINT_START VARIABLE=small_print VALUE=False
+    {% endif %}
+    
+    # If the bed is particularly hot, use both heaters in any case, wether it is a small print or not
+    {% if BED_TEMP >= outer_bed_force_activation_temp %}
+    SET_GCODE_VARIABLE MACRO=PRINT_START VARIABLE=force_outer_bed_heater VALUE=True
+    {% else %}
+    # Print extends beyond center, set temperatures for both beds
+    SET_GCODE_VARIABLE MACRO=PRINT_START VARIABLE=force_outer_bed_heater VALUE=False
+    {% endif %}
+    
+>>>>>>> fc1d1ee6868aa94615d8ea363d881973da0d4ee0
     SET_BED_TEMPERATURE TARGET={BED_TEMP}                           ; Heat Bed to target temp
     BED_TEMPERATURE_WAIT MINIMUM={BED_TEMP-2} MAXIMUM={BED_TEMP+4}  ; Waits until the bed reaches close to target
     {% if BED_HEAT_SOAK_MINUTES > 0 %}
     RESPOND MSG="Waiting {BED_HEAT_SOAK_MINUTES} minutes for the bed to settle."
     G4 P{BED_HEAT_SOAK_MINUTES * 60000}
     {% endif %}
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> fc1d1ee6868aa94615d8ea363d881973da0d4ee0
     CG28
     
     {% if BED_MESH == 'full' %}
@@ -123,9 +154,15 @@ gcode:
     TEMPERATURE_WAIT SENSOR=extruder MINIMUM={EXTRUDER_TEMP-4} MAXIMUM={EXTRUDER_TEMP+10}  ; Wait for extruder to reach near target temperature
     LINE_PURGE                                                      ; KAMP Line Purge near print
     G92 E0                                                          ; Reset Extruder
+<<<<<<< HEAD
     G1 Z2.0 F3000                                                   ; Move Z Axis up 
     M117 Printing           
        
+=======
+    G1 Z2.0 F3000                                                   ; Move Z Axis up
+    M117 Printing
+    
+>>>>>>> fc1d1ee6868aa94615d8ea363d881973da0d4ee0
 [gcode_macro PRINT_END]
 gcode:
     Frame_Light_OFF
@@ -145,6 +182,7 @@ gcode:
     SET_FILAMENT_SENSOR SENSOR=filament_sensor ENABLE=0
     M117
     END_TUNE                ; Print End Beeper Jingle
+<<<<<<< HEAD
 
 #############################################################################
 #   Pause, Resume & Cancel Macros
@@ -186,11 +224,55 @@ gcode:
       SET_IDLE_TIMEOUT TIMEOUT=43200
   {% endif %}
 
+=======
+    
+    #############################################################################
+    #   Pause, Resume & Cancel Macros
+    #############################################################################
+    
+[gcode_macro PAUSE]
+rename_existing: BASE_PAUSE
+gcode:
+    PAUSE_TUNE
+    {% set z = params.Z|default(30)|int %}
+    {% if printer['pause_resume'].is_paused|int == 0 %}
+    SET_GCODE_VARIABLE MACRO=RESUME VARIABLE=etemp VALUE={printer['extruder'].target|default(220)}
+    # Store current extruder temperature before cooling
+    SET_GCODE_VARIABLE MACRO=LOAD_FILAMENT VARIABLE=prev_temp VALUE={printer['extruder'].target|default(220)}
+    SET_GCODE_VARIABLE MACRO=UNLOAD_FILAMENT VARIABLE=prev_temp VALUE={printer['extruder'].target|default(220)}
+    # Store Z-hop value for RESUME
+    SET_GCODE_VARIABLE MACRO=RESUME VARIABLE=zhop VALUE={z}
+    SET_FILAMENT_SENSOR SENSOR=filament_sensor ENABLE=0
+    SAVE_GCODE_STATE NAME=PAUSE
+    BASE_PAUSE
+    G91
+    {% if (printer.gcode_move.position.z + z) < printer.toolhead.axis_maximum.z %}
+    G1 E-2 F2700
+    G1 X3 Y3 F3000
+    G1 E-2 Z{z} F1600
+    SAVE_GCODE_STATE NAME=ZLIFT
+    {% else %}
+    { action_respond_info("Pause zhop exceeds maximum Z height.") }
+    SET_GCODE_VARIABLE MACRO=RESUME VARIABLE=zhop VALUE=0
+    G1 E-2 F2700
+    G1 X3 Y3 F3000
+    G1 E-2 F1600
+    SAVE_GCODE_STATE NAME=ZLIFT
+    {% endif %}
+    G90
+    G1 X{printer.toolhead.axis_minimum.x+5} Y{printer.toolhead.axis_maximum.y-5} F6000
+    SAVE_GCODE_STATE NAME=PAUSEPARK
+    SET_HEATER_TEMPERATURE HEATER=extruder TARGET=175
+    SET_IDLE_TIMEOUT TIMEOUT=43200
+    {% endif %}
+    
+>>>>>>> fc1d1ee6868aa94615d8ea363d881973da0d4ee0
 [gcode_macro RESUME]
 rename_existing: BASE_RESUME
 variable_zhop: 0
 variable_etemp: 0
 gcode:
+<<<<<<< HEAD
   {% if printer['pause_resume'].is_paused|int == 1 %}
       SET_FILAMENT_SENSOR SENSOR=filament_sensor ENABLE=1                           ; enable filament sensor
       SET_IDLE_TIMEOUT TIMEOUT={printer.configfile.settings.idle_timeout.timeout}   ; set timeout back to configured value
@@ -241,22 +323,86 @@ runout_gcode:
 event_delay: 3.0
 pause_delay: 1.0
 switch_pin: PA12
+=======
+    {% if printer['pause_resume'].is_paused|int == 1 %}
+    SET_FILAMENT_SENSOR SENSOR=filament_sensor ENABLE=1                           ; enable filament sensor
+    SET_IDLE_TIMEOUT TIMEOUT={printer.configfile.settings.idle_timeout.timeout}   ; set timeout back to configured value
+    {% if etemp > 0 %}
+    SET_HEATER_TEMPERATURE HEATER=extruder TARGET={etemp|int}
+    TEMPERATURE_WAIT SENSOR=extruder MINIMUM={etemp|int - 4} MAXIMUM={etemp|int + 10}  ; wait for hotend to heat back up to print temp
+    {% endif %}
+    RESTORE_GCODE_STATE NAME=PAUSEPARK MOVE=1 MOVE_SPEED=100                      ; go back to park position in case toolhead was moved during pause                                                                        ; enable extruder stepper motor
+    G91                                                                           ; relative positioning
+    M83                                                                           ; set extruder to relative mode
+    G1 E80  F200                                                                  ; extrude 80mm of filament to prime the nozzle
+    G4 P2000                                                                      ; wait for 2 seconds to stabilise pressure
+    G1 X20 F15000                                                                 ; wiggle movement to ensure free movement of purge
+    G1 X-20
+    G1 X20
+    G1 X-20
+    G1 X20
+    G1 X-20
+    RESTORE_GCODE_STATE NAME=ZLIFT MOVE=1 MOVE_SPEED=60                           ; restore to the zlift position above the print
+    G1 X-3 Y-3 F3000                                                              ; Undo the pause Wipe out
+    G1 Z{zhop * -1} F900
+    RESTORE_GCODE_STATE NAME=PAUSE MOVE=1 MOVE_SPEED=60                           ; restore to the paused position (lowers to final print location)
+    M400                                                                          ; wait for all moves to complete
+    BASE_RESUME                                                                   ; resume print
+    {% endif %}
+    
+[gcode_macro CANCEL_PRINT]
+rename_existing: BASE_CANCEL_PRINT
+gcode:
+    SET_IDLE_TIMEOUT TIMEOUT={printer.configfile.settings.idle_timeout.timeout}      ; set timeout back to configured value
+    CLEAR_PAUSE
+    SDCARD_RESET_FILE
+    PRINT_END
+    BASE_CANCEL_PRINT
+    
+    #############################################################################
+    #   Filament Sensor & Change Macros
+    #############################################################################
+    
+# [filament_switch_sensor filament_sensor]
+# pause_on_runout: True
+# insert_gcode:
+#     M117 Insert Detected
+# runout_gcode:
+#     M117 Runout Detected
+#     SET_GCODE_VARIABLE MACRO=UNLOAD_FILAMENT VARIABLE=prev_temp VALUE={printer.extruder.target|int}
+#     UNLOAD_FILAMENT
+# event_delay: 3.0
+# pause_delay: 1.0
+# switch_pin: PA12
+>>>>>>> fc1d1ee6868aa94615d8ea363d881973da0d4ee0
 
 [delayed_gcode DISABLE_FILAMENT_SENSOR]
 initial_duration: 1
 gcode:
     SET_FILAMENT_SENSOR SENSOR=filament_sensor ENABLE=0
+<<<<<<< HEAD
 
 [gcode_macro M600]
 description: Pause for colour change
 gcode:
   PAUSE
 
+=======
+   # SET_FILAMENT_SENSOR SENSOR=encoder_sensor ENABLE=0
+    
+[gcode_macro M600]
+description: Pause for colour change
+gcode:
+    PAUSE
+    UNLOAD_FILAMENT
+    
+>>>>>>> fc1d1ee6868aa94615d8ea363d881973da0d4ee0
 [gcode_macro LOAD_FILAMENT]
 variable_prev_temp: 0
 variable_load_distance: 25
 variable_purge_distance: 75
 gcode:
+<<<<<<< HEAD
   {% 
     # pick the first non-zero value: prev_temp → current target → 220 
     set target_temp = prev_temp|int or printer.extruder.target|round(0) or 220 
@@ -275,11 +421,32 @@ gcode:
   G1 E{purge_distance} F{speed}
   RESTORE_GCODE_STATE NAME=load_state
 
+=======
+    {%
+    # pick the first non-zero value: prev_temp → current target → 220
+    set target_temp = prev_temp|int or printer.extruder.target|round(0) or 220
+    %}
+    {% if prev_temp|int == 0 and printer.extruder.target|round(0) == 0 %}
+    RESPOND PREFIX="LOAD_FILAMENT" MSG="No temp set — defaulting to {target_temp}°C"
+    {% endif %}
+    SET_HEATER_TEMPERATURE HEATER=extruder TARGET={target_temp}
+    TEMPERATURE_WAIT SENSOR=extruder MINIMUM={target_temp - 4} MAXIMUM={target_temp + 40}
+    {% set speed = params.SPEED|default(300) %}
+    {% set max_vel = printer.configfile.settings.extruder.max_extrude_only_velocity * 30 %}
+    SAVE_GCODE_STATE NAME=load_state
+    G91
+    G92 E0
+    G1 E{load_distance} F{max_vel}
+    G1 E{purge_distance} F{speed}
+    RESTORE_GCODE_STATE NAME=load_state
+    
+>>>>>>> fc1d1ee6868aa94615d8ea363d881973da0d4ee0
 [gcode_macro UNLOAD_FILAMENT]
 variable_prev_temp: 0
 variable_unload_distance: 75
 variable_purge_distance: 15
 gcode:
+<<<<<<< HEAD
   {% 
     set target_temp = prev_temp|int or printer.extruder.target|round(0) or 220 
   %}
@@ -305,6 +472,33 @@ gcode:
 #   X/Y/Z Stepper Config
 #############################################################################
 
+=======
+    {%
+    set target_temp = prev_temp|int or printer.extruder.target|round(0) or 220
+    %}
+    {% if prev_temp|int == 0 and printer.extruder.target|round(0) == 0 %}
+    RESPOND PREFIX="UNLOAD_FILAMENT" MSG="No temp set — defaulting to {target_temp}°C"
+    {% endif %}
+    SET_HEATER_TEMPERATURE HEATER=extruder TARGET={target_temp}
+    TEMPERATURE_WAIT SENSOR=extruder MINIMUM={target_temp - 4} MAXIMUM={target_temp + 40}
+    {% set speed = params.SPEED|default(300) %}
+    {% set max_vel = printer.configfile.settings.extruder.max_extrude_only_velocity * 30 %}
+    SAVE_GCODE_STATE NAME=unload_state
+    G91
+    G92 E0
+    G1 E{purge_distance} F{speed}
+    G1 E-{unload_distance} F{max_vel}
+    RESTORE_GCODE_STATE NAME=unload_state
+    {% if printer['pause_resume'].is_paused|int == 1 %}
+    G4 P3000                      ; wait 3 s before cooling
+    SET_HEATER_TEMPERATURE HEATER=extruder TARGET=175
+    {% endif %}
+    
+    #############################################################################
+    #   X/Y/Z Stepper Config
+    #############################################################################
+    
+>>>>>>> fc1d1ee6868aa94615d8ea363d881973da0d4ee0
 [stepper_x]
 step_pin: PC14
 dir_pin: PC13
@@ -395,10 +589,17 @@ heater_pin: PA7
 sensor_type:NTC 100K MGB18-104F39050L32
 sensor_pin: PA1
 max_power: 1
+<<<<<<< HEAD
 control = pid
-# pid_kp = 25.825
-# pid_ki = 1.979
-# pid_kd = 84.254
+pid_kp = 25.825
+pid_ki = 1.979
+pid_kd = 84.254
+=======
+#control = pid
+#pid_kp = 25.825
+#pid_ki = 1.979
+#pid_kd = 84.254
+>>>>>>> fc1d1ee6868aa94615d8ea363d881973da0d4ee0
 pressure_advance: 0.02725
 pressure_advance_smooth_time: 0.02
 max_extrude_cross_section: 5                  ; standard klipper default 4* (NozzleDiam^2)
@@ -423,10 +624,17 @@ heater_pin:PB10
 sensor_type: NTC 100K MGB18-104F39050L32
 sensor_pin: PA0
 max_power: 1.0
+<<<<<<< HEAD
 control = pid
-# pid_kp = 68.601
-# pid_ki = 1.550
-# pid_kd = 758.895
+pid_kp = 68.601
+pid_ki = 1.550
+pid_kd = 758.895
+=======
+#control = pid
+#pid_kp = 68.601
+#pid_ki = 1.550
+#pid_kd = 758.895
+>>>>>>> fc1d1ee6868aa94615d8ea363d881973da0d4ee0
 min_temp: 0
 max_temp: 120 
 pwm_cycle_time: 0.3
@@ -446,10 +654,17 @@ heater_pin:PC8
 max_power:1.0
 sensor_type: NTC 100K MGB18-104F39050L32
 sensor_pin:PC2
+<<<<<<< HEAD
 control = pid
-# pid_kp = 75.301
-# pid_ki = 1.383
-# pid_kd = 1025.032
+pid_kp = 75.301
+pid_ki = 1.383
+pid_kd = 1025.032
+=======
+#control = pid
+#pid_kp = 75.301
+#pid_ki = 1.383
+#pid_kd = 1025.032
+>>>>>>> fc1d1ee6868aa94615d8ea363d881973da0d4ee0
 min_temp:0
 max_temp:120
 pwm_cycle_time: 0.3
@@ -464,6 +679,7 @@ heating_gain: 1                     ; heating gain
 gcode:
     SET_HEATER_TEMPERATURE HEATER=heater_bed TARGET={params.TARGET}
     {% if printer["gcode_macro PRINT_START"].force_outer_bed_heater or not printer["gcode_macro PRINT_START"].small_print %}
+<<<<<<< HEAD
       SET_HEATER_TEMPERATURE HEATER=heater_bed_outer TARGET={params.TARGET}
     {% endif %}
 
@@ -488,10 +704,37 @@ gcode:
       RESPOND TYPE=error MSG="Error on 'BED_TEMPERATURE_WAIT': missing MINIMUM or MAXIMUM."
     {% endif %}
 
+=======
+    SET_HEATER_TEMPERATURE HEATER=heater_bed_outer TARGET={params.TARGET}
+    {% endif %}
+    
+[gcode_macro BED_TEMPERATURE_WAIT]
+gcode:
+    {% if params.MINIMUM is defined and params.MAXIMUM is defined %}
+    TEMPERATURE_WAIT SENSOR=heater_bed MINIMUM={params.MINIMUM} MAXIMUM={params.MAXIMUM}
+    {% if printer["gcode_macro PRINT_START"].force_outer_bed_heater or not printer["gcode_macro PRINT_START"].small_print %}
+    TEMPERATURE_WAIT SENSOR="heater_generic heater_bed_outer" MINIMUM={params.MINIMUM} MAXIMUM={params.MAXIMUM}
+    {% endif %}
+    {% elif params.MINIMUM is defined %}
+    TEMPERATURE_WAIT SENSOR=heater_bed MINIMUM={params.MINIMUM}
+    {% if printer["gcode_macro PRINT_START"].force_outer_bed_heater or not printer["gcode_macro PRINT_START"].small_print %}
+    TEMPERATURE_WAIT SENSOR="heater_generic heater_bed_outer" MINIMUM={params.MINIMUM}
+    {% endif %}
+    {% elif params.MAXIMUM is defined %}
+    TEMPERATURE_WAIT SENSOR=heater_bed MAXIMUM={params.MAXIMUM}
+    {% if printer["gcode_macro PRINT_START"].force_outer_bed_heater or not printer["gcode_macro PRINT_START"].small_print %}
+    TEMPERATURE_WAIT SENSOR="heater_generic heater_bed_outer" MAXIMUM={params.MAXIMUM}
+    {% endif %}
+    {% else %}
+    RESPOND TYPE=error MSG="Error on 'BED_TEMPERATURE_WAIT': missing MINIMUM or MAXIMUM."
+    {% endif %}
+    
+>>>>>>> fc1d1ee6868aa94615d8ea363d881973da0d4ee0
 [gcode_macro M140]               ; redefine the existing M140
 rename_existing: M99140
 gcode:
     {% if params.S is defined %}
+<<<<<<< HEAD
       SET_BED_TEMPERATURE TARGET={params.S|int}
     {% endif %}
 
@@ -501,10 +744,22 @@ gcode:
       SET_HEATER_TEMPERATURE HEATER=heater_bed_outer TARGET={params.S|int}
     {% endif %}
 
+=======
+    SET_BED_TEMPERATURE TARGET={params.S|int}
+    {% endif %}
+    
+[gcode_macro M141]
+gcode:
+    {% if params.S is defined %}
+    SET_HEATER_TEMPERATURE HEATER=heater_bed_outer TARGET={params.S|int}
+    {% endif %}
+    
+>>>>>>> fc1d1ee6868aa94615d8ea363d881973da0d4ee0
 [gcode_macro M190]
 rename_existing: M99190
 gcode:    
     {% if params.S is defined %}
+<<<<<<< HEAD
       SET_BED_TEMPERATURE TARGET={params.S|int}
       BED_TEMPERATURE_WAIT MINIMUM={(params.S|int)-2} MAXIMUM={(params.S|int)+4}
     {% endif %}
@@ -520,11 +775,32 @@ gcode:
 #   Probe Config
 #############################################################################
 
+=======
+    SET_BED_TEMPERATURE TARGET={params.S|int}
+    BED_TEMPERATURE_WAIT MINIMUM={(params.S|int)-2} MAXIMUM={(params.S|int)+4}
+    {% endif %}
+    
+[gcode_macro M191]
+gcode:
+    {% if params.S is defined %}
+    SET_HEATER_TEMPERATURE HEATER=heater_bed_outer TARGET={params.S|int}
+    TEMPERATURE_WAIT SENSOR="heater_generic heater_bed_outer" MINIMUM={(params.S|int)-2} MAXIMUM={(params.S|int)+4}
+    {% endif %}
+    
+    #############################################################################
+    #   Probe Config
+    #############################################################################
+    
+>>>>>>> fc1d1ee6868aa94615d8ea363d881973da0d4ee0
 [probe]
 pin:^PA11
 x_offset: -24.25
 y_offset: 20.45
-# z_offset = 0.0
+<<<<<<< HEAD
+z_offset = 0.0
+=======
+#z_offset = 0.0
+>>>>>>> fc1d1ee6868aa94615d8ea363d881973da0d4ee0
 speed: 6.0
 samples: 3
 samples_result: median 
@@ -556,6 +832,7 @@ pin: PC7
 
 [gcode_macro Frame_Light_ON]
 gcode:
+<<<<<<< HEAD
   SET_PIN PIN=Frame_Light VALUE=1
 
 [gcode_macro Frame_Light_OFF]
@@ -574,6 +851,26 @@ gcode:
 #   Beeper Config
 #############################################################################
 
+=======
+    SET_PIN PIN=Frame_Light VALUE=1
+    
+[gcode_macro Frame_Light_OFF]
+gcode:
+    SET_PIN PIN=Frame_Light VALUE=0
+    
+[gcode_macro Part_Light_ON]
+gcode:
+    SET_PIN PIN=Part_Light VALUE=1
+    
+[gcode_macro Part_Light_OFF]
+gcode:
+    SET_PIN PIN=Part_Light VALUE=0
+    
+    #############################################################################
+    #   Beeper Config
+    #############################################################################
+    
+>>>>>>> fc1d1ee6868aa94615d8ea363d881973da0d4ee0
 [pwm_cycle_time beeper]
 pin: PA2
 value: 0
@@ -587,7 +884,11 @@ gcode:
     SET_PIN PIN=beeper VALUE=0.8 CYCLE_TIME={ 1.0/S if S > 0 else 1 }       ; Activate the beeper at a 80% duty cycle
     G4 P{P}                                         ; Hold the beep for the specified duration
     SET_PIN PIN=beeper VALUE=0                      ; Turn off the beeper
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> fc1d1ee6868aa94615d8ea363d881973da0d4ee0
 [gcode_macro PAUSE_TUNE]
 gcode:
     M300 S784 P300
@@ -595,6 +896,7 @@ gcode:
     
 [gcode_macro END_TUNE]
 gcode:
+<<<<<<< HEAD
     M300 S392 P250 
     M300 S494 P250 
     M300 S587 P250 
@@ -604,6 +906,17 @@ gcode:
 #   Fan & Temp Monitoring Config
 #############################################################################
 
+=======
+    M300 S392 P250
+    M300 S494 P250
+    M300 S587 P250
+    M300 S523 P300
+    
+    #############################################################################
+    #   Fan & Temp Monitoring Config
+    #############################################################################
+    
+>>>>>>> fc1d1ee6868aa94615d8ea363d881973da0d4ee0
 [fan]
 pin: PC9
 
@@ -619,11 +932,19 @@ stepper: stepper_x, stepper_y, stepper_z, extruder
 [delayed_gcode start_fan_at_idle_speed]
 initial_duration: 5.                                ; 5s wait after boot
 gcode:
+<<<<<<< HEAD
   # Gcode Hack to trigger the mainboard fan from printer boot
   SET_HEATER_TEMPERATURE HEATER=heater_bed TARGET=1 ; bed heat to 1degC
   G4 P2000                                          ; wait 2s
   SET_HEATER_TEMPERATURE HEATER=heater_bed TARGET=0 ; bed heat off
 
+=======
+    # Gcode Hack to trigger the mainboard fan from printer boot
+    SET_HEATER_TEMPERATURE HEATER=heater_bed TARGET=1 ; bed heat to 1degC
+    G4 P2000                                          ; wait 2s
+    SET_HEATER_TEMPERATURE HEATER=heater_bed TARGET=0 ; bed heat off
+    
+>>>>>>> fc1d1ee6868aa94615d8ea363d881973da0d4ee0
 [temperature_sensor RockchipHost]
 sensor_type: temperature_host
 min_temp: 10
@@ -640,11 +961,19 @@ max_temp: 85
 
 [gcode_macro CG28]
 gcode:
+<<<<<<< HEAD
   {% if "xyz" not in printer.toolhead.homed_axes %}
       G28
   {% else %}
   {% endif %}
   
+=======
+    {% if "xyz" not in printer.toolhead.homed_axes %}
+    G28
+    {% else %}
+    {% endif %}
+    
+>>>>>>> fc1d1ee6868aa94615d8ea363d881973da0d4ee0
 [safe_z_home]
 home_xy_position: 141.75,97.05
 speed: 100
@@ -658,9 +987,15 @@ calibrate_y: 117.5
 
 [gcode_macro Axis_Twist_Comp_Tune]
 gcode:    
+<<<<<<< HEAD
       CG28
       AXIS_TWIST_COMPENSATION_CALIBRATE
 
+=======
+    CG28
+    AXIS_TWIST_COMPENSATION_CALIBRATE
+    
+>>>>>>> fc1d1ee6868aa94615d8ea363d881973da0d4ee0
 [screws_tilt_adjust]
 screw1: 56.75, 182.05  
 screw1_name: rear left screw
@@ -688,6 +1023,7 @@ gcode:
     BED_TEMPERATURE_WAIT MINIMUM={target - 2} MAXIMUM={target + 5}
     CG28
     SCREWS_TILT_CALCULATE
+<<<<<<< HEAD
 
 [gcode_macro Calibrate_Probe_Z_Offset]
 gcode:
@@ -752,6 +1088,72 @@ serial: /tmp/klipper_host_mcu
 #   Input Shaper Config
 #############################################################################
 
+=======
+    
+[gcode_macro Calibrate_Probe_Z_Offset]
+gcode:
+    CG28
+    PROBE_CALIBRATE
+    
+[gcode_macro Auto_Full_Bed_Level]
+gcode:
+    RESPOND PREFIX="info" MSG="Running Custom Bed Leveling Macro"
+    BED_MESH_CLEAR
+    SET_BED_TEMPERATURE TARGET=60
+    BED_TEMPERATURE_WAIT MINIMUM=58 MAXIMUM=65
+    CG28
+    BED_MESH_CALIBRATE
+    
+    #############################################################################
+    #   PID Tuning Macros
+    #############################################################################
+    
+[gcode_macro PID_Tune_EXTRUDER]
+gcode:
+    {% set temperature = params.TEMPERATURE|default(210) %}
+    CG28
+    M106 S255
+    PID_CALIBRATE HEATER=extruder TARGET={temperature}
+    SAVE_CONFIG
+    
+[gcode_macro PID_Tune_BED]
+gcode:
+    {% set temperature = params.TEMPERATURE|default(60) %}
+    CG28
+    M106 S255 ;Sets Print Fans to 100%
+    PID_CALIBRATE HEATER=heater_bed TARGET={temperature}
+    SAVE_CONFIG
+    
+[gcode_macro PID_Tune_Outer_BED]
+gcode:
+    {% set temperature = params.TEMPERATURE|default(60) %}
+    G28
+    M106 S255 ;Sets Print Fans to 100%
+    SET_HEATER_TEMPERATURE HEATER=heater_bed TARGET={temperature} 	;Heats Inner Zone at the same time for better tuning
+    PID_CALIBRATE HEATER=heater_bed_outer TARGET={temperature}
+    SAVE_CONFIG
+    
+    #############################################################################
+    #   SPI Accelerometer Config
+    #############################################################################
+    
+[mcu rpi] 
+serial: /tmp/klipper_host_mcu
+
+[adxl345]
+cs_pin: rpi:None
+spi_bus: spidev0.2
+
+[resonance_tester]
+accel_chip: adxl345
+probe_points:
+    100, 100, 20
+    
+    #############################################################################
+    #   Input Shaper Config
+    #############################################################################
+    
+>>>>>>> fc1d1ee6868aa94615d8ea363d881973da0d4ee0
 [input_shaper]
 shaper_type_x: mzv
 shaper_freq_x: 111.6
@@ -765,6 +1167,10 @@ shaper_freq_y: 32.4
 
 #############################################################################
 
+<<<<<<< HEAD
+
+=======
+>>>>>>> fc1d1ee6868aa94615d8ea363d881973da0d4ee0
 #*# <---------------------- SAVE_CONFIG ---------------------->
 #*# DO NOT EDIT THIS BLOCK OR BELOW. The contents are auto-generated.
 #*#
